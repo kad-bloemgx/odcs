@@ -1,0 +1,18 @@
+apiVersion: v2
+name: odcs
+description: Open Data Contract Service - PostgreSQL + PostgREST + Swagger UI Helm Chart
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - postgresql
+  - postgrest
+  - swagger-ui
+  - openapi
+maintainers:
+  - name: ODCS Team
+    email: odcs@example.com
+home: https://github.com/kadaster/dhub/odcs
+sources:
+  - https://github.com/kadaster/dhub/odcs
+

@@ -1,0 +1,157 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: odcs-openapi-spec
+  namespace: {{ .Values.namespace }}
+data:
+  openapi.yaml: |
+    openapi: 3.0.3
+    info:
+      title: Personen API
+      version: 1.0.0
+      description: API for managing personen (persons) data
+      contact:
+        name: ODCS Team
+        email: odcs@example.com
+    servers:
+      - url: http://localhost:3000
+        description: Local development
+      - url: /api
+        description: Production
+    paths:
+      /personen:
+        get:
+          summary: List all personen
+          operationId: listPersonen
+          tags:
+            - personen
+          parameters:
+            - name: select
+              in: query
+              description: Columns to select
+              schema:
+                type: string
+              example: "*"
+            - name: id
+              in: query
+              description: Filter by id
+              schema:
+                type: string
+              example: "eq.123456"
+            - name: naam
+              in: query
+              description: Filter by naam
+              schema:
+                type: string
+              example: "like.*Jan*"
+          responses:
+            '200':
+              description: List of personen
+              content:
+                application/json:
+                  schema:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Persoon'
+            '400':
+              description: Bad request
+        post:
+          summary: Create a new persoon
+          operationId: createPersoon
+          tags:
+            - personen
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Persoon'
+          responses:
+            '201':
+              description: Persoon created
+            '400':
+              description: Bad request
+      /personen/{id}:
+        get:
+          summary: Get persoon by id
+          operationId: getPersoonsById
+          tags:
+            - personen
+          parameters:
+            - name: id
+              in: path
+              required: true
+              schema:
+                type: string
+              example: "123456"
+          responses:
+            '200':
+              description: Persoon details
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/Persoon'
+            '404':
+              description: Persoon not found
+        patch:
+          summary: Update persoon
+          operationId: updatePersoon
+          tags:
+            - personen
+          parameters:
+            - name: id
+              in: path
+              required: true
+              schema:
+                type: string
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Persoon'
+          responses:
+            '200':
+              description: Persoon updated
+        delete:
+          summary: Delete persoon
+          operationId: deletePersoon
+          tags:
+            - personen
+          parameters:
+            - name: id
+              in: path
+              required: true
+              schema:
+                type: string
+          responses:
+            '204':
+              description: Persoon deleted
+
+    components:
+      schemas:
+        Persoon:
+          type: object
+          required:
+            - id
+            - naam
+            - adres
+            - woonplaats
+          properties:
+            id:
+              type: string
+              description: Unieke identificatie van de persoon
+              example: "123456"
+            naam:
+              type: string
+              description: Volledige naam van de persoon
+              example: "Jan Jansen"
+            adres:
+              type: string
+              description: Volledig adres (straat en huisnummer)
+              example: "Koppejan 1, 7461 DB"
+            woonplaats:
+              type: string
+              description: Woonplaats of gemeente
+              example: "Rijssen"
+

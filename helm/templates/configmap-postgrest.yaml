@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: odcs-postgrest-config
+  namespace: {{ .Values.namespace }}
+data:
+  postgrest.conf: |
+    db-uri = "postgres://postgrest:postgrest@odcs-postgres:5432/postgres"
+    db-schema = "public"
+    db-anon-role = "postgrest"
+    server-port = 3000
+

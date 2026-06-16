@@ -1,0 +1,17 @@
+{{- if .Values.postgres.storage.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: odcs-postgres-pvc
+  namespace: {{ .Values.namespace }}
+spec:
+  accessModes:
+    - {{ .Values.postgres.storage.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.postgres.storage.size }}
+  {{- if .Values.postgres.storage.storageClass }}
+  storageClassName: {{ .Values.postgres.storage.storageClass }}
+  {{- end }}
+{{- end }}
+

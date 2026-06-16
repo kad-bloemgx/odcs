@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: odcs-postgres
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: odcs-postgres
+spec:
+  type: {{ .Values.postgres.service.type }}
+  clusterIP: None
+  selector:
+    app: odcs-postgres
+  ports:
+  - port: {{ .Values.postgres.service.port }}
+    targetPort: {{ .Values.postgres.service.targetPort }}
+    protocol: TCP
+    name: postgresql
+

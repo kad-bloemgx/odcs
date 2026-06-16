@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: odcs-postgrest
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: odcs-postgrest
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: odcs-postgrest
+  template:
+    metadata:
+      labels:
+        app: odcs-postgrest
+    spec:
+      containers:
+      - name: postgrest
+        image: "{{ .Values.postgrest.image.repository }}:{{ .Values.postgrest.image.tag }}"
+        imagePullPolicy: {{ .Values.postgrest.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: 3000
+        env:
+        - name: PGRST_DB_URI
+          value: "postgres://postgrest:postgrest@odcs-postgres:5432/postgres"
+        - name: PGRST_DB_SCHEMA
+          value: "{{ .Values.postgrest.dbSchema }}"
+        - name: PGRST_DB_ANON_ROLE
+          value: "postgrest"
+        - name: PGRST_SERVER_PORT
+          value: "3000"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        resources:
+          {{- toYaml .Values.postgrest.resources | nindent 10 }}
+      initContainers:
+      - name: wait-for-db
+        image: busybox:1.35
+        command: ['sh', '-c', 'until nc -z odcs-postgres 5432; do echo waiting for postgres; sleep 2; done']
+

@@ -1,0 +1,51 @@
+openapi: 3.0.3
+info:
+  title: Personen API
+  description: Eenvoudige API voor personen (gegenereerd spec)
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+    description: PostgREST server
+paths:
+  /personen:
+    get:
+      summary: Lijst personen
+      operationId: getPersonen
+      parameters:
+        - name: id
+          in: query
+          description: Filter op id (PostgREST: use eq.<value>)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lijst van personen
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Person'
+components:
+  schemas:
+    Person:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unieke identificatie van de persoon
+        naam:
+          type: string
+          description: Volledige naam
+        adres:
+          type: string
+          description: Volledig adres
+        woonplaats:
+          type: string
+          description: Woonplaats
+      example:
+        id: "123456"
+        naam: "Jan Jansen"
+        adres: "Koppejan 1, 7461 DB"
+        woonplaats: "Rijssen"
+

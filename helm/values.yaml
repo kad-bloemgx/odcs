@@ -1,0 +1,128 @@
+replicaCount: 1
+
+namespace: default
+
+# Postgres configuration
+postgres:
+  image:
+    repository: postgis/postgis
+    tag: "15-3.3"
+    pullPolicy: IfNotPresent
+
+  user: postgres
+  password: postgres
+  database: postgres
+
+  # Storage configuration
+  storage:
+    enabled: true
+    size: 10Gi
+    storageClass: "standard" # change based on your K8s storage class
+    accessMode: ReadWriteOnce
+
+  # Resource limits
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 5432
+    targetPort: 5432
+
+# PostgREST configuration
+postgrest:
+  image:
+    repository: postgrest/postgrest
+    tag: "latest"
+    pullPolicy: IfNotPresent
+
+  # PostgREST config values
+  dbHost: "odcs-postgres"
+  dbPort: 5432
+  dbUser: postgrest
+  dbPassword: postgrest
+  dbName: postgres
+  dbSchema: public
+
+  # Accessible via (inside cluster): http://odcs-postgrest:3000
+  service:
+    type: ClusterIP
+    port: 3000
+    targetPort: 3000
+
+  # Resource limits
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "50m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+# Swagger UI configuration
+swagger:
+  image:
+    repository: swaggerapi/swagger-ui
+    tag: "latest"
+    pullPolicy: IfNotPresent
+
+  # Points to the openapi-server inside the cluster
+  apiUrl: "http://odcs-openapi-server:80/openapi.yaml"
+
+  service:
+    type: ClusterIP
+    port: 8080
+    targetPort: 8080
+
+  # Resource limits
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "25m"
+    limits:
+      memory: "128Mi"
+      cpu: "100m"
+
+# OpenAPI spec server (nginx)
+openapi:
+  image:
+    repository: nginx
+    tag: "alpine"
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 80
+
+  # Resource limits
+  resources:
+    requests:
+      memory: "32Mi"
+      cpu: "10m"
+    limits:
+      memory: "64Mi"
+      cpu: "50m"
+
+# Ingress configuration (optional)
+ingress:
+  enabled: false
+  className: "nginx" # or your ingress controller
+  annotations: {}
+  hosts:
+    - host: odcs.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Service Monitor for Prometheus (optional)
+serviceMonitor:
+  enabled: false
+

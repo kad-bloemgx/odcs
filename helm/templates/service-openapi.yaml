@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: odcs-openapi-server
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: odcs-openapi-server
+spec:
+  type: {{ .Values.openapi.service.type }}
+  selector:
+    app: odcs-openapi-server
+  ports:
+  - port: {{ .Values.openapi.service.port }}
+    targetPort: {{ .Values.openapi.service.targetPort }}
+    protocol: TCP
+    name: http
+

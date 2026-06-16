@@ -1,0 +1,45 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Gelderland",
+        "source": "approximate-generated",
+        "note": "Approximate demo polygon in WGS84 (lat/lon). Use official boundaries for production.",
+        "code": "PV31",
+        "description": "Gelderland",
+        "value": "95,1",
+        "unit": "%"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [6.0500, 51.7600],
+            [6.1500, 51.8200],
+            [6.2500, 51.8600],
+            [6.3600, 51.9300],
+            [6.4300, 52.0100],
+            [6.5200, 52.0800],
+            [6.6400, 52.1500],
+            [6.8200, 52.2000],
+            [7.0000, 52.1800],
+            [7.0600, 52.1200],
+            [6.9800, 52.0600],
+            [6.9200, 51.9800],
+            [6.8200, 51.9300],
+            [6.7000, 51.8800],
+            [6.6000, 51.8200],
+            [6.4800, 51.7800],
+            [6.3000, 51.7400],
+            [6.1800, 51.7200],
+            [6.0900, 51.7400],
+            [6.0500, 51.7600]
+          ]
+        ]
+      },
+    }
+  ]
+}
+

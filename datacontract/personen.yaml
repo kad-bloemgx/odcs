@@ -1,0 +1,64 @@
+dataContractSpecification: 3.1.0
+id: personen
+name: Personen
+version: 1.0.0
+description: Eenvoudig datacontract met persoonlijke gegevens
+owner: Kadaster
+publisher: Kadaster
+contactPoint: data@kadaster.nl
+license: CC0 1.0
+licenseUrl: https://creativecommons.org/publicdomain/zero/1.0/
+issued: 2026-06-09
+modified: 2026-06-09
+keywords:
+  - personen
+  - adres
+  - contact
+
+servers:
+  - url: https://api.kadaster.nl/v1
+    description: Production
+  - url: https://api-dev.kadaster.nl/v1
+    description: Development
+
+formats:
+  - json
+  - csv
+  - parquet
+
+sla:
+  availability_target: 99.5% monthly
+  freshness_max_hours: 24
+  response_time_p99_ms: 500
+
+schema:
+  type: object
+  properties:
+    id:
+      type: string
+      description: Unieke identificatie van de persoon
+    naam:
+      type: string
+      description: Volledige naam van de persoon
+    adres:
+      type: string
+      description: Volledig adres (straat en huisnummer)
+    woonplaats:
+      type: string
+      description: Woonplaats of gemeente
+  required:
+    - id
+    - naam
+    - adres
+    - woonplaats
+
+examples:
+  - id: "123456"
+    naam: "Jan Jansen"
+    adres: "Koppejan 1, 7461 DB"
+    woonplaats: "Rijssen"
+  - id: "123457"
+    naam: "Maria Pieterse"
+    adres: "Kerkweg 42, 7411 CX"
+    woonplaats: "Deventer"
+

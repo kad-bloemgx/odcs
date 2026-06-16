@@ -1,0 +1,34 @@
+# Helm ignore patterns
+
+# Common version control
+.git/
+.gitignore
+.gitattributes
+
+# Common build and deploy
+dist/
+build/
+target/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Documentation
+*.md
+LICENSE
+CHANGELOG.md
+
+# Tests
+tests/
+test/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
