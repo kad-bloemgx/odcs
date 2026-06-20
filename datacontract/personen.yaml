@@ -40,25 +40,56 @@ schema:
     naam:
       type: string
       description: Volledige naam van de persoon
-    adres:
+    adres_id:
       type: string
-      description: Volledig adres (straat en huisnummer)
+      description: Referentie naar de ADRES entity
+  required:
+    - id
+    - naam
+    - adres_id
+
+adresSchema:
+  type: object
+  properties:
+    id:
+      type: string
+      description: Unieke adres ID
+    straat:
+      type: string
+      description: Straatnaam
+    huisnummer:
+      type: string
+      description: Huisnummer
+    postcode:
+      type: string
+      description: Postcode
     woonplaats:
       type: string
       description: Woonplaats of gemeente
   required:
     - id
-    - naam
-    - adres
+    - straat
+    - huisnummer
+    - postcode
     - woonplaats
 
 examples:
-  - id: "123456"
-    naam: "Jan Jansen"
-    adres: "Koppejan 1, 7461 DB"
-    woonplaats: "Rijssen"
-  - id: "123457"
-    naam: "Maria Pieterse"
-    adres: "Kerkweg 42, 7411 CX"
-    woonplaats: "Deventer"
+  personen:
+    - id: "123456"
+      naam: "Jan Jansen"
+      adres_id: "ADDR001"
+    - id: "123457"
+      naam: "Maria Pieterse"
+      adres_id: "ADDR002"
+  adressen:
+    - id: "ADDR001"
+      straat: "Koppejan"
+      huisnummer: "1"
+      postcode: "7461 DB"
+      woonplaats: "Rijssen"
+    - id: "ADDR002"
+      straat: "Kerkweg"
+      huisnummer: "42"
+      postcode: "7411 CX"
+      woonplaats: "Deventer"
 

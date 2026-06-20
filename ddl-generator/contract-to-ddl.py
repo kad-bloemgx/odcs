@@ -17,7 +17,7 @@ class ContractToDDL:
         'integer': 'INT',
         'number': 'DECIMAL(10,2)',
         'boolean': 'BOOLEAN',
-        'date': 'DATE',123456
+        'date': 'DATE',
         'date-time': 'TIMESTAMP',
         'object': 'JSON',
         'array': 'JSON'
@@ -70,19 +70,22 @@ class ContractToDDL:
 
         return base_type
 
-    def generate_create_table(self, table_name: str = None) -> (str, List[str]):
+    def generate_create_table(self, table_name: str = None, schema_data: Dict = None) -> (str, List[str]):
         """
         Genereer CREATE TABLE statement
 
         Args:
             table_name: Tabel naam (standaard uit contract id)
+            schema_data: Schema data dict (standaard uit contract schema)
         """
         if not table_name:
             table_name = self.contract.get('id', 'data').replace('-', '_')
 
-        schema = self.contract.get('schema', {})
-        properties = schema.get('properties', {})
-        required_fields = schema.get('required', [])
+        if not schema_data:
+            schema_data = self.contract.get('schema', {})
+
+        properties = schema_data.get('properties', {})
+        required_fields = schema_data.get('required', [])
 
         if not properties:
             raise ValueError("Contract bevat geen schema.properties")
@@ -133,23 +136,32 @@ class ContractToDDL:
 
         return sql, column_comments
 
-    def generate_insert_examples(self, table_name: str = None) -> List[str]:
+    def generate_insert_examples(self, table_name: str = None, examples_data: List = None, schema_data: Dict = None) -> List[str]:
         """
         Genereer INSERT statements op basis van examples
 
         Args:
             table_name: Tabel naam (standaard uit contract id)
+            examples_data: Lijst van example records
+            schema_data: Schema data dict
         """
         if not table_name:
             table_name = self.contract.get('id', 'data').replace('-', '_')
 
-        examples = self.contract.get('examples', [])
+        if not examples_data:
+            examples_data = self.contract.get('examples', [])
+
+        if not schema_data:
+            schema_data = self.contract.get('schema', {})
+
         insert_statements = []
 
-        schema = self.contract.get('schema', {})
-        properties = schema.get('properties', {})
+        properties = schema_data.get('properties', {})
 
-        for example in examples:
+        # Handle examples lijst of dict format
+        examples_list = examples_data if isinstance(examples_data, list) else []
+
+        for example in examples_list:
             columns = []
             values = []
 
@@ -173,19 +185,22 @@ class ContractToDDL:
 
         return insert_statements
 
-    def generate_index_statements(self, table_name: str = None) -> List[str]:
+    def generate_index_statements(self, table_name: str = None, schema_data: Dict = None) -> List[str]:
         """
         Genereer INDEX statements
 
         Args:
             table_name: Tabel naam (standaard uit contract id)
+            schema_data: Schema data dict
         """
         if not table_name:
             table_name = self.contract.get('id', 'data').replace('-', '_')
 
+        if not schema_data:
+            schema_data = self.contract.get('schema', {})
+
         indexes = []
-        schema = self.contract.get('schema', {})
-        properties = schema.get('properties', {})
+        properties = schema_data.get('properties', {})
 
         # Maak index op alle non-primary key velden
         for field_name in properties.keys():
@@ -199,8 +214,12 @@ class ContractToDDL:
         """
         Genereer complete DDL (CREATE TABLE + INSERT examples + INDEXES)
 
+        Ondersteunt meerdere tabellen gedefinieerd in het contract:
+        - schema → per se table
+        - adresSchema, contactSchema, etc. → automatisch gedetecteerd
+
         Args:
-            table_name: Tabel naam (standaard uit contract id)
+            table_name: Tabel naam (optioneel, standaard uit contract id)
         """
         ddl = []
 
@@ -211,27 +230,72 @@ class ContractToDDL:
         ddl.append(f"-- Database type: {self.db_type}")
         ddl.append("")
 
-        # CREATE TABLE
-        create_sql, comments = self.generate_create_table(table_name)
-        ddl.append(create_sql)
-        if comments:
-            ddl.append("")
-            ddl.extend(comments)
-        ddl.append("")
+        # Collect all schema definitions
+        schemas = {}
+        examples_dict = self.contract.get('examples', {})
 
-        # INSERT Examples
-        inserts = self.generate_insert_examples(table_name)
-        if inserts:
-            ddl.append("-- Example data")
-            ddl.extend(inserts)
+        # Primary schema
+        if 'schema' in self.contract:
+            base_table_name = table_name if table_name else self.contract.get('id', 'data').replace('-', '_')
+            schemas[base_table_name] = self.contract.get('schema')
+
+        # Additional schemas (adresSchema, contactSchema, etc.)
+        # Look for keys in examples dict to determine correct table names
+        for key, value in self.contract.items():
+            if key.endswith('Schema') and key != 'schema' and isinstance(value, dict):
+                # Derive schema name and look for matching examples key
+                schema_base = key.replace('Schema', '')
+
+                # Try to find matching examples key (e.g., "adressen", "contacten")
+                table_name_key = None
+                if isinstance(examples_dict, dict):
+                    for examples_key in examples_dict.keys():
+                        # Match if examples_key contains schema_base (case-insensitive)
+                        if schema_base.lower() in examples_key.lower():
+                            table_name_key = examples_key
+                            break
+
+                # If no match found, apply simple pluralization
+                if not table_name_key:
+                    # Dutch pluralization rules
+                    if schema_base.endswith(('s', 'z')):
+                        table_name_key = schema_base + 'sen'
+                    elif schema_base.endswith(('t', 'd')):
+                        table_name_key = schema_base + 'en'
+                    else:
+                        table_name_key = schema_base + 'en'
+
+                schemas[table_name_key] = value
+
+        # Generate DDL for each schema/table
+        for table_name_key, schema_def in schemas.items():
+            # CREATE TABLE
+            create_sql, comments = self.generate_create_table(table_name_key, schema_def)
+            ddl.append(create_sql)
+            if comments:
+                ddl.append("")
+                ddl.extend(comments)
             ddl.append("")
 
-        # INDEXES
-        indexes = self.generate_index_statements(table_name)
-        if indexes:
-            ddl.append("-- Indexes for performance")
-            ddl.extend(indexes)
-            ddl.append("")
+            # INSERT Examples
+            examples_data = None
+            if isinstance(examples_dict, dict):
+                # Look for examples with matching table name
+                examples_data = examples_dict.get(table_name_key)
+
+            if examples_data:
+                inserts = self.generate_insert_examples(table_name_key, examples_data, schema_def)
+                if inserts:
+                    ddl.append("-- Example data")
+                    ddl.extend(inserts)
+                    ddl.append("")
+
+            # INDEXES
+            indexes = self.generate_index_statements(table_name_key, schema_def)
+            if indexes:
+                ddl.append("-- Indexes for performance")
+                ddl.extend(indexes)
+                ddl.append("")
 
         return "\n".join(ddl)
 
