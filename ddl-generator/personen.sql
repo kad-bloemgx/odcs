@@ -1,6 +1,19 @@
 -- DDL Generated from Data Contract: Personen v1.0.0
 -- Database type: postgresql
 
+-- Create roles if they don't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'postgrest') THEN
+        CREATE ROLE postgrest nologin;
+    END IF;
+END
+$$;
+
+GRANT usage ON SCHEMA public TO postgrest;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO postgrest;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO postgrest;
+
 CREATE TABLE personen (
     id VARCHAR(255) NOT NULL,
     naam VARCHAR(255) NOT NULL,
@@ -14,6 +27,7 @@ COMMENT ON COLUMN personen.adres_id IS 'Referentie naar de ADRES entity';
 
 -- Example data
 INSERT INTO personen (id, naam, adres_id) VALUES ('123456', 'Jan Jansen', 'ADDR001');
+INSERT INTO personen (id, naam, adres_id) VALUES ('123458', 'Pietje Puk', 'ADDR001');
 INSERT INTO personen (id, naam, adres_id) VALUES ('123457', 'Maria Pieterse', 'ADDR002');
 
 -- Indexes for performance
@@ -44,3 +58,6 @@ CREATE INDEX idx_adressen_straat ON adressen (straat);
 CREATE INDEX idx_adressen_huisnummer ON adressen (huisnummer);
 CREATE INDEX idx_adressen_postcode ON adressen (postcode);
 CREATE INDEX idx_adressen_woonplaats ON adressen (woonplaats);
+
+-- Foreign Key Constraints
+ALTER TABLE personen ADD CONSTRAINT fk_personen_adres_id FOREIGN KEY (adres_id) REFERENCES adressen (id);

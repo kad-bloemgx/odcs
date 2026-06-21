@@ -5,7 +5,6 @@ ODCS Contract to DDL Generator
 Zet een Open Data Contract (YAML/JSON) automatisch om naar SQL DDL statements.
 """
 
-import yaml
 import json
 from pathlib import Path
 from typing import Dict, Any, List
@@ -39,8 +38,194 @@ class ContractToDDL:
         """Laad contract YAML/JSON"""
         with open(path, 'r', encoding='utf-8') as f:
             if path.endswith('.yaml') or path.endswith('.yml'):
-                return yaml.safe_load(f)
+                try:
+                    import yaml
+                    return yaml.safe_load(f)
+                except ImportError:
+                    print("⚠️  Waarschuwing: PyYAML niet gevonden. Gebruik fallback parser voor eenvoudige YAML.")
+                    return self._fallback_yaml_load(f.read())
             return json.load(f)
+
+    def _fallback_yaml_load(self, content: str) -> Dict[str, Any]:
+        """Eenvoudige fallback voor YAML parsing zonder externe dependencies"""
+        result = {}
+        lines = content.split('\n')
+        stack = [(result, -1)]
+        
+        # Voor de specifieke structuur van personen.yaml:
+        # We hoeven alleen de top-level keys en hun directe objecten/lijsten te vangen
+        # Dit is GEEN volledige YAML parser.
+        
+        current_obj = result
+        current_indent = -1
+        
+        import re
+        
+        for line in lines:
+            if not line.strip() or line.strip().startswith('#'):
+                continue
+                
+            indent = len(line) - len(line.lstrip())
+            line = line.strip()
+            
+            if ':' in line:
+                key, value = line.split(':', 1)
+                key = key.strip()
+                value = value.strip()
+                
+                # Check for list start
+                if not value and indent > current_indent:
+                    new_obj = {}
+                    if isinstance(current_obj, list):
+                        current_obj.append(new_obj)
+                    else:
+                        current_obj[key] = new_obj
+                    stack.append((new_obj, indent))
+                    current_obj = new_obj
+                    current_indent = indent
+                elif value:
+                    # Strip quotes if present
+                    if (value.startswith('"') and value.endswith('"')) or \
+                       (value.startswith("'") and value.endswith("'")):
+                        value = value[1:-1]
+                    
+                    # Handle list within object (e.g. keywords)
+                    if indent > current_indent:
+                        pass # should already be handled by stack
+                    
+                    while stack and indent <= stack[-1][1]:
+                        stack.pop()
+                    
+                    if stack:
+                        current_obj, current_indent = stack[-1]
+                    
+                    if isinstance(current_obj, list):
+                        # Should not happen in this simplified version for personen.yaml
+                        pass
+                    else:
+                        current_obj[key] = value
+            elif line.startswith('- '):
+                # Handle list item
+                value = line[2:].strip()
+                if (value.startswith('"') and value.endswith('"')) or \
+                   (value.startswith("'") and value.endswith("'")):
+                    value = value[1:-1]
+                
+                while stack and indent < stack[-1][1]:
+                    stack.pop()
+                
+                if stack:
+                    current_obj, current_indent = stack[-1]
+                
+                if isinstance(current_obj, list):
+                    current_obj.append(value)
+                else:
+                    # If it's a dict but we see a list item, maybe the previous key should have been a list
+                    pass
+                pass
+
+        # Gezien de complexiteit van een echte parser, laten we voor deze specifieke taak 
+        # een meer doelgerichte aanpak gebruiken als PyYAML ontbreekt.
+        return self._doelgerichte_parser(content)
+
+    def _doelgerichte_parser(self, content: str) -> Dict[str, Any]:
+        """Heel specifieke parser voor personen.yaml structuur"""
+        import re
+        result = {}
+        
+        # Simpele regex voor top-level velden
+        for match in re.finditer(r'^(\w+):\s*(.*)$', content, re.MULTILINE):
+            key, val = match.groups()
+            if val.strip():
+                result[key] = val.strip().strip('"').strip("'")
+
+        # Zoek naar schema secties
+        def extract_object(section_name, text):
+            pattern = rf'^{section_name}:\s*$\n((?:[ ]+.*\n?)*)'
+            match = re.search(pattern, text, re.MULTILINE)
+            if not match: return {}
+            
+            obj = {}
+            props = {}
+            section_text = match.group(1)
+            
+            # Zoek properties
+            prop_match = re.search(r'^[ ]+properties:\s*$\n((?:[ ]{4,}.*\n?)*)', section_text, re.MULTILINE)
+            if prop_match:
+                prop_text = prop_match.group(1)
+                # Extraheer individuele properties
+                # We splitsen de prop_text in blokken per property op niveau 4 spaties
+                prop_blocks = re.split(r'^[ ]{4}(\w+):\s*$\n?', prop_text, flags=re.MULTILINE)
+                # prop_blocks[0] is vaak leeg of bevat alleen witruimte
+                for i in range(1, len(prop_blocks), 2):
+                    p_name = prop_blocks[i].strip()
+                    p_data = prop_blocks[i+1]
+                    p_obj = {}
+                    
+                    # Extract attributes like type, description (niveau 6 spaties)
+                    for p_attr in re.finditer(r'^[ ]{6}(\w+):\s*(.*)$', p_data, re.MULTILINE):
+                        attr_k, attr_v = p_attr.groups()
+                        p_obj[attr_k] = attr_v.strip().strip('"').strip("'")
+                    
+                    # Extract relationships (niveau 6 spaties)
+                    if 'relationships:' in p_data:
+                        rels = []
+                        # relationships: op niveau 6
+                        rel_section_match = re.search(r'^[ ]{6}relationships:\s*$\n((?:[ ]{8,}.*\n?)*)', p_data, re.MULTILINE)
+                        if rel_section_match:
+                            rel_section = rel_section_match.group(1)
+                            # items in lijst op niveau 8
+                            # Gebruik een meer robuuste splitsing die ook rekening houdt met meerdere attributen per item
+                            rel_items = re.split(r'^[ ]{8}- ', rel_section, flags=re.MULTILINE)
+                            for item_text in rel_items:
+                                item_text = item_text.strip()
+                                if not item_text: continue
+                                r_obj = {}
+                                # attributen binnen het item
+                                for r_attr in re.finditer(r'^[ ]*(\w+):\s*(.*)$', item_text, re.MULTILINE):
+                                    ak, av = r_attr.groups()
+                                    r_obj[ak] = av.strip().strip('"').strip("'")
+                                if r_obj: rels.append(r_obj)
+                        p_obj['relationships'] = rels
+                        
+                    props[p_name] = p_obj
+            
+            obj['properties'] = props
+            
+            # Zoek required
+            req_match = re.search(r'^[ ]+required:\s*$\n((?:[ ]{4,}- .*\n?)*)', section_text, re.MULTILINE)
+            if req_match:
+                req_text = req_match.group(1)
+                obj['required'] = [r.strip('- ').strip() for r in req_text.strip().split('\n')]
+                
+            return obj
+
+        result['schema'] = extract_object('schema', content)
+        result['adresSchema'] = extract_object('adresSchema', content)
+        
+        # Voorbeelden extraheren
+        examples = {}
+        ex_match = re.search(r'^examples:\s*$\n((?:[ ]+.*\n?)*)', content, re.MULTILINE)
+        if ex_match:
+            ex_text = ex_match.group(1)
+            # Voor elke tabel in examples
+            for t_match in re.finditer(r'^[ ]{2}(\w+):\s*$\n((?:[ ]{4,}.*\n?)*)', ex_text, re.MULTILINE):
+                t_name, t_data = t_match.groups()
+                t_list = []
+                # Voor elk record (begint met - id:)
+                records = re.split(r'^[ ]{4}- ', t_data, flags=re.MULTILINE)
+                for rec in records[1:]: # eerste is leeg
+                    rec_obj = {}
+                    # Gebruik een betere regex voor attributes die rekening houdt met inspringen
+                    # Match key: value, waarbij value ook optionele spaties aan het begin kan hebben
+                    for r_attr in re.finditer(r'^[ ]*(\w+):\s*(.*)$', rec, re.MULTILINE):
+                        r_k, r_v = r_attr.groups()
+                        rec_obj[r_k] = r_v.strip().strip('"').strip("'")
+                    t_list.append(rec_obj)
+                examples[t_name] = t_list
+        result['examples'] = examples
+        
+        return result
 
     def _get_sql_type(self, json_type: str, format_spec: str = None) -> str:
         """
@@ -96,6 +281,12 @@ class ContractToDDL:
         columns = []
         column_comments: List[str] = []
         for field_name, field_spec in properties.items():
+            # Sla virtuele/inverse relaties over voor de fysieke tabel definitie
+            relationships = field_spec.get('relationships', [])
+            is_virtual = any(rel.get('type') == 'inverseForeignKey' for rel in relationships if isinstance(rel, dict))
+            if is_virtual:
+                continue
+
             # Bepaal SQL type
             field_type = field_spec.get('type', 'string')
             field_format = field_spec.get('format')
@@ -132,9 +323,25 @@ class ContractToDDL:
             columns.append(f"    PRIMARY KEY ({pk_field})")
 
         sql += ",\n".join(columns)
+        
+        # Add foreign keys if any
+        fk_statements = []
+        for field_name, field_spec in properties.items():
+            relationships = field_spec.get('relationships', [])
+            for rel in relationships:
+                if isinstance(rel, dict) and rel.get('type') == 'foreignKey' and 'to' in rel:
+                    to_ref = rel['to']
+                    if '.' in to_ref:
+                        ref_table, ref_col = to_ref.split('.', 1)
+                        if self.db_type == 'postgresql':
+                            fk_statements.append(f"ALTER TABLE {table_name} ADD CONSTRAINT fk_{table_name}_{field_name} FOREIGN KEY ({field_name}) REFERENCES {ref_table} ({ref_col});")
+                        else:
+                            # Inline for others or also ALTER
+                            fk_statements.append(f"ALTER TABLE {table_name} ADD FOREIGN KEY ({field_name}) REFERENCES {ref_table} ({ref_col});")
+
         sql += "\n);"
 
-        return sql, column_comments
+        return sql, column_comments, fk_statements
 
     def generate_insert_examples(self, table_name: str = None, examples_data: List = None, schema_data: Dict = None) -> List[str]:
         """
@@ -203,8 +410,14 @@ class ContractToDDL:
         properties = schema_data.get('properties', {})
 
         # Maak index op alle non-primary key velden
-        for field_name in properties.keys():
+        for field_name, field_spec in properties.items():
             if field_name != 'id':
+                # Sla virtuele/inverse relaties over
+                relationships = field_spec.get('relationships', [])
+                is_virtual = any(rel.get('type') == 'inverseForeignKey' for rel in relationships if isinstance(rel, dict))
+                if is_virtual:
+                    continue
+
                 index_name = f"idx_{table_name}_{field_name}"
                 indexes.append(f"CREATE INDEX {index_name} ON {table_name} ({field_name});")
 
@@ -229,6 +442,22 @@ class ContractToDDL:
         ddl.append(f"-- DDL Generated from Data Contract: {contract_name} v{contract_version}")
         ddl.append(f"-- Database type: {self.db_type}")
         ddl.append("")
+
+        # Add PostgREST roles and permissions if database is PostgreSQL
+        if self.db_type == 'postgresql':
+            ddl.append("-- Create roles if they don't exist")
+            ddl.append("DO $$")
+            ddl.append("BEGIN")
+            ddl.append("    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'postgrest') THEN")
+            ddl.append("        CREATE ROLE postgrest nologin;")
+            ddl.append("    END IF;")
+            ddl.append("END")
+            ddl.append("$$;")
+            ddl.append("")
+            ddl.append("GRANT usage ON SCHEMA public TO postgrest;")
+            ddl.append("GRANT SELECT ON ALL TABLES IN SCHEMA public TO postgrest;")
+            ddl.append("ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO postgrest;")
+            ddl.append("")
 
         # Collect all schema definitions
         schemas = {}
@@ -268,14 +497,18 @@ class ContractToDDL:
                 schemas[table_name_key] = value
 
         # Generate DDL for each schema/table
+        all_fk_statements = []
         for table_name_key, schema_def in schemas.items():
             # CREATE TABLE
-            create_sql, comments = self.generate_create_table(table_name_key, schema_def)
+            create_sql, comments, fk_statements = self.generate_create_table(table_name_key, schema_def)
             ddl.append(create_sql)
             if comments:
                 ddl.append("")
                 ddl.extend(comments)
             ddl.append("")
+            
+            if fk_statements:
+                all_fk_statements.extend(fk_statements)
 
             # INSERT Examples
             examples_data = None
@@ -296,6 +529,12 @@ class ContractToDDL:
                 ddl.append("-- Indexes for performance")
                 ddl.extend(indexes)
                 ddl.append("")
+
+        # Add all foreign keys at the end to avoid dependency issues during table creation
+        if all_fk_statements:
+            ddl.append("-- Foreign Key Constraints")
+            ddl.extend(all_fk_statements)
+            ddl.append("")
 
         return "\n".join(ddl)
 

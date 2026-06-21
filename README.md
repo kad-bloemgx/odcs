@@ -23,6 +23,27 @@ Het project gebruikt het datacontract (`datacontract/personen.yaml`) als "single
 ## Doel van het Project
 Het hoofddoel is om te laten zien hoe een **contract-first** benadering zorgt voor consistentie. Wanneer het datacontract wijzigt, kunnen de database, de API-specificatie en de documentatie automatisch worden bijgewerkt, waardoor de kans op fouten en inconsistenties wordt geminimaliseerd.
 
+## API Gebruik (PostgREST)
+De API wordt ontsloten via PostgREST. Omdat de relaties in het datacontract zijn vastgelegd en vertaald naar foreign keys in de database, ondersteunt de API "Resource Embedding".
+
+### Voorbeeld: Persoon met Adres ophalen
+Om een persoon inclusief de bijbehorende adresgegevens op te halen, gebruik je de `select` parameter:
+
+```http
+GET /personen?select=*,adressen(*)
+```
+
+Dit resulteert in een JSON-output waarbij het adres als een genest object in de persoon wordt opgenomen.
+
+### Voorbeeld: Adres met Personen ophalen (Inverse relatie)
+Je kunt ook de omgekeerde weg bewandelen: alle personen ophalen die op een specifiek adres wonen. PostgREST gebruikt hiervoor de `inverseForeignKey` die we in het contract hebben gedefinieerd:
+
+```http
+GET /adressen?select=*,personen(*)
+```
+
+Dit resulteert in een lijst van adressen, waarbij elk adres een lijst van `personen` bevat die naar dat adres verwijzen.
+
 ## Referenties
 - [Open Data Contract Standard v3.1.0](https://bitol-io.github.io/open-data-contract-standard/v3.1.0/)
 - [PostgREST Documentation](https://docs.postgrest.org/en/v14/)
