@@ -5,6 +5,8 @@ Dit project bevat een kant-en-klare Docker Compose opzet die:
 - een PostgREST service start die automatisch een REST API (en OpenAPI-specificatie) genereert op basis van de database
 - een Swagger UI instance start die de PostgREST OpenAPI-specificatie laadt
 
+
+
 Bestanden toegevoegd:
 - `docker-compose.yml` - compose file voor db, postgrest en swagger
 - `ddl-generator/postgrest.conf` - configuratie voor PostgREST
