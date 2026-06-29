@@ -46,3 +46,24 @@ services:
     ports:
       - "8081:80"
     restart: unless-stopped
+
+  # GraphQL interface via PostGraphile
+  graphile:
+    image: graphile/postgraphile:latest
+    depends_on:
+      db:
+        condition: service_healthy
+    command:
+      - --connection
+      - postgres://postgrest:postgrest@db:5432/postgres
+      - --schema
+      - public
+      - --watch
+      - --dynamic-json
+      - --graphiql
+      - --enhance-graphiql
+      - --port
+      - "5000"
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
