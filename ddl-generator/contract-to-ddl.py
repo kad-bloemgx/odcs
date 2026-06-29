@@ -548,28 +548,37 @@ class ContractToDDL:
 
 def main():
     import sys
+    import argparse
 
-    if len(sys.argv) < 2:
-        print("Gebruik: python contract-to-ddl.py <contract.yaml> [output.sql] [--db-type postgresql|mysql|sqlite|mssql]")
-        print("\nVoorbeelden:")
-        print("  python contract-to-ddl.py datacontract/personen.yaml personen.sql")
-        print("  python contract-to-ddl.py datacontract/personen.yaml personen.sql --db-type mysql")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description='ODCS Contract to DDL Generator')
+    parser.add_argument('contract', help='Pad naar het contract bestand (YAML/JSON)')
+    parser.add_argument('output_pos', nargs='?', help='Output SQL bestand (optioneel, indien --out niet gebruikt wordt)')
+    parser.add_argument('-o', '--out', help='Output SQL bestand')
+    parser.add_argument('--db-type', default='postgresql', choices=['postgresql', 'mysql', 'sqlite', 'mssql'], 
+                        help='Database type (standaard: postgresql)')
 
-    contract_path = sys.argv[1]
-    output_path = sys.argv[2] if len(sys.argv) > 2 else f"{Path(contract_path).stem}.sql"
-    db_type = 'postgresql'
+    args = parser.parse_args()
 
-    # Parse optional arguments
-    if '--db-type' in sys.argv:
-        idx = sys.argv.index('--db-type')
-        if idx + 1 < len(sys.argv):
-            db_type = sys.argv[idx + 1]
+    contract_path = args.contract
+    
+    # Bepaal output pad: 1. --out vlag, 2. positionele argument, 3. default gebaseerd op contract naam
+    if args.out:
+        output_path = args.out
+    elif args.output_pos:
+        output_path = args.output_pos
+    else:
+        output_path = f"{Path(contract_path).stem}.sql"
+
+    db_type = args.db_type
 
     print(f"🔄 Converteer contract naar DDL ({db_type})...")
-    converter = ContractToDDL(contract_path, db_type)
-    converter.save(output_path)
-    print(f"✅ Klaar! DDL gegenereerd: {output_path}")
+    try:
+        converter = ContractToDDL(contract_path, db_type)
+        converter.save(output_path)
+        print(f"✅ Klaar! DDL gegenereerd: {output_path}")
+    except Exception as e:
+        print(f"❌ Fout bij het genereren van DDL: {e}")
+        sys.exit(1)
 
 
 if __name__ == '__main__':

@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: postgrest
       POSTGRES_DB: postgres
     volumes:
-      - ./ddl-generator/personen.sql:/docker-entrypoint-initdb.d/personen.sql:ro
+      - ./ddl-generator/generated/personen-ddl.sql:/docker-entrypoint-initdb.d/personen-ddl.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -22,7 +22,7 @@ services:
       db:
         condition: service_healthy
     volumes:
-      - ./ddl-generator/postgrest.conf:/etc/postgrest.conf:ro
+      - ./configuratie/postgrest.conf:/etc/postgrest.conf:ro
     command: ["postgrest", "/etc/postgrest.conf"]
     ports:
       - "3000:3000"
@@ -42,7 +42,7 @@ services:
   openapi-server:
     image: nginx:alpine
     volumes:
-      - ./openapi/generated-openapi-spec.yaml:/usr/share/nginx/html/openapi.yaml:ro
+      - ./openapi-generator/generated/openapi-spec.yaml:/usr/share/nginx/html/openapi.yaml:ro
     ports:
       - "8081:80"
     restart: unless-stopped

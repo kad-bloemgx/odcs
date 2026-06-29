@@ -5,7 +5,10 @@ ODCS Contract to OpenAPI Spec Generator
 Zet een Open Data Contract (YAML/JSON) automatisch om naar OpenAPI 3.0.3 spec.
 """
 
-import yaml
+try:
+    import yaml
+except ImportError:
+    yaml = None
 import json
 from datetime import datetime
 from pathlib import Path
@@ -21,7 +24,18 @@ class ContractToOpenAPI:
         """Laad contract YAML/JSON"""
         with open(path, 'r', encoding='utf-8') as f:
             if path.endswith('.yaml') or path.endswith('.yml'):
-                return yaml.safe_load(f)
+                if yaml:
+                    return yaml.safe_load(f)
+                else:
+                    # Fallback naar een zeer eenvoudige parser als PyYAML ontbreekt
+                    # Dit is puur om basale velden te kunnen lezen voor de spec
+                    content = f.read()
+                    import re
+                    result = {}
+                    for match in re.finditer(r'^(\w+):\s*(.*)$', content, re.MULTILINE):
+                        key, val = match.groups()
+                        result[key] = val.strip().strip('"').strip("'")
+                    return result
             return json.load(f)
 
     def _create_base_spec(self) -> Dict[str, Any]:
@@ -338,27 +352,52 @@ class ContractToOpenAPI:
 
     def save(self, output_path: str):
         """Sla spec op als YAML"""
-        with open(output_path, 'w', encoding='utf-8') as f:
-            yaml.dump(self.spec, f, default_flow_style=False, sort_keys=False)
-        print(f"✅ OpenAPI spec opgeslagen: {output_path}")
+        final_path = output_path
+        if not yaml:
+            # Fallback naar JSON als PyYAML ontbreekt
+            if not final_path.endswith('.json'):
+                final_path = final_path.replace('.yaml', '.json').replace('.yml', '.json')
+            if final_path == output_path: # Geen extensie verandering mogelijk
+                final_path = final_path + ".json"
+        
+        with open(final_path, 'w', encoding='utf-8') as f:
+            if yaml:
+                yaml.dump(self.spec, f, default_flow_style=False, sort_keys=False)
+            else:
+                json.dump(self.spec, f, indent=2)
+                print(f"⚠️  Waarschuwing: PyYAML niet gevonden. Spec opgeslagen als JSON: {final_path}")
+        print(f"✅ OpenAPI spec opgeslagen: {final_path}")
 
 
 def main():
     import sys
+    import argparse
 
-    if len(sys.argv) < 2:
-        print("Gebruik: python contract-to-openapi.py <contract.yaml> [output.yaml]")
-        print("\nVoorbeeld:")
-        print("  python contract-to-openapi.py open-data-contract.md openapi-spec.yaml")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description='ODCS Contract to OpenAPI Spec Generator')
+    parser.add_argument('contract', help='Pad naar het contract bestand (YAML/JSON)')
+    parser.add_argument('output_pos', nargs='?', help='Output YAML bestand (optioneel, indien --out niet gebruikt wordt)')
+    parser.add_argument('-o', '--out', help='Output YAML bestand')
 
-    contract_path = sys.argv[1]
-    output_path = sys.argv[2] if len(sys.argv) > 2 else 'generated-openapi-spec.yaml'
+    args = parser.parse_args()
+
+    contract_path = args.contract
+    
+    # Bepaal output pad: 1. --out vlag, 2. positionele argument, 3. default
+    if args.out:
+        output_path = args.out
+    elif args.output_pos:
+        output_path = args.output_pos
+    else:
+        output_path = f"{Path(contract_path).stem}-openapi.yaml"
 
     print(f"🔄 Converteer contract naar OpenAPI spec...")
-    converter = ContractToOpenAPI(contract_path)
-    converter.save(output_path)
-    print(f"✅ Klaar! OpenAPI spec gegenereerd: {output_path}")
+    try:
+        converter = ContractToOpenAPI(contract_path)
+        converter.save(output_path)
+        print(f"✅ Klaar! OpenAPI spec gegenereerd: {output_path}")
+    except Exception as e:
+        print(f"❌ Fout bij het genereren van OpenAPI spec: {e}")
+        sys.exit(1)
 
 
 if __name__ == '__main__':
