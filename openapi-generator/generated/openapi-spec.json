@@ -1,0 +1,434 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Personen",
+    "description": "Eenvoudig datacontract met persoonlijke gegevens",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Kadaster",
+      "email": "data@kadaster.nl"
+    },
+    "license": {
+      "name": "CC0 1.0",
+      "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+    }
+  },
+  "servers": "- url: https://api.kadaster.nl/v1",
+  "tags": [
+    {
+      "name": "Datasets",
+      "description": "Dataset operations"
+    },
+    {
+      "name": "Metadata",
+      "description": "Dataset metadata operations"
+    },
+    {
+      "name": "Health",
+      "description": "API health and status"
+    }
+  ],
+  "paths": {
+    "/datasets": {
+      "get": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "List all available datasets",
+        "operationId": "listDatasets",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of datasets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetList"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service temporarily unavailable"
+          }
+        }
+      }
+    },
+    "/datasets/{datasetId}": {
+      "get": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Get dataset by ID",
+        "operationId": "getDataset",
+        "parameters": [
+          {
+            "name": "datasetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dataset metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dataset"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Dataset not found"
+          },
+          "410": {
+            "description": "Dataset version is deprecated"
+          }
+        }
+      }
+    },
+    "/datasets/{datasetId}/data": {
+      "get": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Download dataset (formats: -,  , j, s, o, n)",
+        "operationId": "getDatasetData",
+        "parameters": [
+          {
+            "name": "datasetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": "- json"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 10000
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dataset records"
+          },
+          "400": {
+            "description": "Invalid parameters"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/datasets/{datasetId}/schema": {
+      "get": {
+        "tags": [
+          "Metadata"
+        ],
+        "summary": "Get JSON schema for dataset",
+        "operationId": "getDatasetSchema",
+        "parameters": [
+          {
+            "name": "datasetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "JSON Schema for dataset"
+          }
+        }
+      }
+    },
+    "/datasets/{datasetId}/versions": {
+      "get": {
+        "tags": [
+          "Metadata"
+        ],
+        "summary": "List all versions of a dataset",
+        "operationId": "listDatasetVersions",
+        "parameters": [
+          {
+            "name": "datasetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of versions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "API health check",
+        "operationId": "getHealth",
+        "responses": {
+          "200": {
+            "description": "API is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthStatus"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unhealthy"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "DatasetList": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DatasetSummary"
+            }
+          },
+          "total": {
+            "type": "integer"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "offset": {
+            "type": "integer"
+          }
+        }
+      },
+      "DatasetSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "publisher": {
+            "type": "string"
+          },
+          "license": {
+            "type": "string",
+            "format": "uri"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "issued": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "modified": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "record_count": {
+            "type": "integer"
+          }
+        }
+      },
+      "Dataset": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/DatasetSummary"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "contactPoint": {
+                "type": "string",
+                "format": "email"
+              },
+              "language": {
+                "type": "string"
+              },
+              "formats": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "example": "- json"
+              },
+              "sla": {
+                "$ref": "#/components/schemas/SLA"
+              },
+              "last_indexed": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        ]
+      },
+      "SLA": {
+        "type": "object",
+        "properties": {
+          "availability_target": {
+            "type": "string",
+            "example": "99.5% monthly"
+          },
+          "freshness_max_hours": {
+            "type": "integer",
+            "example": 24
+          },
+          "response_time_p99_ms": {
+            "type": "integer",
+            "example": 500
+          }
+        }
+      },
+      "VersionList": {
+        "type": "object",
+        "properties": {
+          "versions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DatasetVersion"
+            }
+          }
+        }
+      },
+      "DatasetVersion": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "released": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "changelog": {
+            "type": "string"
+          },
+          "record_count": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "current",
+              "deprecated",
+              "archived"
+            ]
+          }
+        }
+      },
+      "HealthStatus": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "healthy",
+              "degraded",
+              "unhealthy"
+            ]
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "components": {
+            "type": "object"
+          },
+          "response_time_ms": {
+            "type": "number"
+          }
+        }
+      }
+    }
+  },
+  "x-contract": {
+    "sla": "availability_target: 99.5% monthly",
+    "freshness_max_hours": 24,
+    "version": "1.0.0",
+    "effective_date": "2026-06-09"
+  }
+}

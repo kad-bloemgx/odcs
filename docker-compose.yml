@@ -47,7 +47,6 @@ services:
       - "8081:80"
     restart: unless-stopped
 
-  # GraphQL interface via PostGraphile
   graphile:
     image: graphile/postgraphile:latest
     depends_on:

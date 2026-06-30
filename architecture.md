@@ -38,11 +38,13 @@ The ODCS project follows a **contract-first** architecture where the data contra
 
 ## Data Flow
 1. The YAML contract is processed by the `ddl-generator` to create SQL DDL
-2. PostgREST converts the PostgreSQL database to a REST API using the **Auto-REST** pattern. This means endpoints and relationships are automatically derived from the database schema.
-   - Example: `GET /adressen?select=*,personen(*)` fetches addresses and their related person records in one call.
-3. OpenAPI spec is generated for documentation and testing
-4. Swagger UI renders the OpenAPI spec into an interactive interface
-5. Helm charts package the entire stack for Kubernetes deployment
+2. PostgREST converteert de PostgreSQL-database naar een REST API volgens het **Auto-REST**-patroon. Dit betekent dat endpoints en relaties automatisch worden afgeleid van het databaseschema.
+   - Voorbeeld: `GET /adressen?select=*,personen(*)` haalt adressen en hun gerelateerde persoon-records op in één aanroep.
+3. PostGraphile ontsluit de database via een **GraphQL** interface. Net als PostgREST worden de queries en mutaties automatisch gegenereerd op basis van de tabellen en relaties in de database.
+   - Voorbeeld: Een GraphQL query kan diepe geneste relaties opvragen zonder extra configuratie.
+4. OpenAPI spec wordt gegenereerd voor documentatie en testen
+5. Swagger UI renders the OpenAPI spec into an interactive interface
+6. Helm charts package the entire stack for Kubernetes deployment
 
 ## Diagrams
 ### High-Level Flow
